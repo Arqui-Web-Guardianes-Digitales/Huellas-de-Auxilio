@@ -42,3 +42,7 @@ INSERT INTO solicitud (id_mascota, id_ciudadano, fecha_solicitud, tipo_vivienda,
 INSERT INTO solicitud (id_mascota, id_ciudadano, fecha_solicitud, tipo_vivienda, motivo, experiencia, estado_solicitud) VALUES (1, 2, '2026-10-26 14:15:00', 'Casa', 'Tenemos espacio', true, 'APROBADA');
 --Juan queria adoptar a Max pero fue Rechazado (porque Maria lo adoptó)
 INSERT INTO solicitud (id_mascota, id_ciudadano, fecha_solicitud, tipo_vivienda, motivo, experiencia, estado_solicitud) VALUES (1, 1, '2026-10-26 09:00:00', 'Departamento', 'Me gusta la raza', false, 'RECHAZADA');
+
+-- EVIDENCIAS DE REPORTES (Fotos de prueba para Juan y María)
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (1, 'http://localhost:8088/imagenes/4020fe65-fbb0-4931-a4a8-af88e90c625b-perrito1.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (2, 'http://localhost:8088/imagenes/c78608e3-b126-47fc-8604-73d81f64ed78-gato perdido.png');
