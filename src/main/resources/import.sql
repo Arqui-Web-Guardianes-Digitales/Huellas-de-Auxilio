@@ -46,3 +46,37 @@ INSERT INTO solicitud (id_mascota, id_ciudadano, fecha_solicitud, tipo_vivienda,
 -- EVIDENCIAS DE REPORTES (Fotos de prueba para Juan y María)
 INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (1, 'http://localhost:8088/imagenes/4020fe65-fbb0-4931-a4a8-af88e90c625b-perrito1.png');
 INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (2, 'http://localhost:8088/imagenes/c78608e3-b126-47fc-8604-73d81f64ed78-gato perdido.png');
+-- UBICACIONES ADICIONALES PARA PRUEBAS (IDs 4 a 13)
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. La Marina 2000', 'San Miguel', 'Frente al parque', -12.076500, -77.094300);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. La Marina', 'San Miguel', 'Cerca de la cuadra 20', -12.077000, -77.094000);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Simón Bolívar 1515', 'Pueblo Libre', 'Frente al Museo Larco', -12.072503, -77.070841);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Simón Bolívar', 'Pueblo Libre', 'Cerca del ingreso al Museo Larco', -12.072600, -77.070800);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Horacio Urteaga', 'Jesús María', 'Parque San José', -12.074310, -77.048130);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Gregorio Escobedo 781', 'Jesús María', 'Cerca del Teatro Peruano Japonés', -12.087500, -77.055300);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Diagonal', 'Miraflores', 'Parque Kennedy', -12.121500, -77.029500);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Óvalo Gutiérrez', 'Miraflores', 'Cerca del cine', -12.110000, -77.035000);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Caminos del Inca', 'Surco', 'Parque de la Amistad', -12.131730, -76.981750);
+INSERT INTO ubicacion (direccion, distrito, referencia, latitud, longitud) VALUES ('Av. Juan Pardo de Zela 480', 'Lince', 'Frente a la municipalidad', -12.083344, -77.031796);
+
+-- REPORTES ADICIONALES PARA PRUEBAS (IDs 4 a 13)
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (4, 1, 1, '2026-11-01', 'M', 'AL', 'Perro atado al sol sin agua.', 'R');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (5, 2, 1, '2026-11-02', 'A', 'ME', 'Gatito solo en una caja junto a la vereda.', 'ER');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (6, 1, 1, '2026-11-03', 'A', 'BA', 'Perro sin collar que deambulaba cerca del museo.', 'AT');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (7, 2, 1, '2026-11-04', 'M', 'ME', 'Se reporta que un perro permanecía atado con una correa muy corta.', 'R');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (8, 1, 1, '2026-11-05', 'A', 'AL', 'Cachorro abandonado junto al parque, cerca de la calzada.', 'ER');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (9, 2, 1, '2026-11-06', 'M', 'BA', 'Se reporta trato brusco hacia un perro en la vía pública.', 'AT');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (10, 2, 2, '2026-11-01', 'A', 'AL', 'Gato abandonado en una caja cerca de la avenida.', 'R');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (11, 1, 2, '2026-11-03', 'M', 'ME', 'Se reporta que un perro permanecía atado sin acceso a agua.', 'ER');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (12, 2, 2, '2026-11-05', 'A', 'BA', 'Perro sin collar encontrado en los alrededores del parque.', 'AT');
+INSERT INTO reporte (id_ubicacion, id_ciudadano, id_entidad, fecha_reporte, tipo_caso, nivel_urgencia, descripcion, estado) VALUES (13, 1, 2, '2026-11-06', 'M', 'AL', 'Se reporta a un perro expuesto al sol, sin agua y con signos de agotamiento.', 'ER');
+
+-- EVIDENCIAS ADICIONALES (HA-013 queda sin evidencia)
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (4, 'http://localhost:8088/imagenes/1e36632f-6593-444b-ac16-2b642a60bda8-evidencia-foto-1.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (5, 'http://localhost:8088/imagenes/09b2a907-1892-4caf-a206-d09e57903d69-evidencia-foto-2.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (6, 'http://localhost:8088/imagenes/b3b732f4-04a3-41c3-908d-260411757753-evidencia2.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (7, 'http://localhost:8088/imagenes/1e36632f-6593-444b-ac16-2b642a60bda8-evidencia-foto-1.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (8, 'http://localhost:8088/imagenes/09b2a907-1892-4caf-a206-d09e57903d69-evidencia-foto-2.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (9, 'http://localhost:8088/imagenes/b3b732f4-04a3-41c3-908d-260411757753-evidencia2.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (10, 'http://localhost:8088/imagenes/1e36632f-6593-444b-ac16-2b642a60bda8-evidencia-foto-1.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (11, 'http://localhost:8088/imagenes/09b2a907-1892-4caf-a206-d09e57903d69-evidencia-foto-2.png');
+INSERT INTO evidencia_reporte (id_reporte, url_evidencia) VALUES (12, 'http://localhost:8088/imagenes/b3b732f4-04a3-41c3-908d-260411757753-evidencia2.png');
