@@ -34,7 +34,7 @@ public class ReporteControlador {
     @PreAuthorize("hasRole('ENTIDAD')")
     public ReporteDTO actualizarEstado(@PathVariable Long idReporte,
                                        @RequestBody ReporteDTO reporteDTO) {
-        Reporte reporteActualizado = reporteServicio.actualizarEstado(idReporte, reporteDTO.getEstado());
+        Reporte reporteActualizado = reporteServicio.actualizarEstado(idReporte, reporteDTO.getEstado(), reporteDTO.getObservacion());
         return (reporteActualizado != null) ? modelMapper.map(reporteActualizado, ReporteDTO.class) : null;
     }
 
