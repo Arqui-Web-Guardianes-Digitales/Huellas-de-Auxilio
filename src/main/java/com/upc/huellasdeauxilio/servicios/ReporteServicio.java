@@ -1,6 +1,10 @@
 package com.upc.huellasdeauxilio.servicios;
 
 import com.upc.huellasdeauxilio.entidades.Entidad;
+import com.upc.huellasdeauxilio.entidades.ActualizarReporte;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.upc.huellasdeauxilio.entidades.Notificacion;
 import com.upc.huellasdeauxilio.entidades.Reporte;
 import com.upc.huellasdeauxilio.entidades.Ubicacion;
@@ -15,6 +19,9 @@ import java.util.Map;
 
 @Service
 public class ReporteServicio {
+
+    @Autowired
+    private ActualizarReporteServicio actualizarReporteServicio;
 
     @Autowired
     private ReporteRepositorio reporteRepositorio;
@@ -62,33 +69,42 @@ public class ReporteServicio {
         return reporteGuardado;
     }
 
-    public Reporte actualizarEstado(Long idReporte, String nuevoEstado) {
-        Reporte reporte = reporteRepositorio.findById(idReporte).orElse(null);
-
-        if (reporte == null) {
-            return null;
+    @Transactional
+    public Reporte actualizarEstado(Long idReporte, String nuevoEstado, String observacion) {
+        if (!"ER".equals(nuevoEstado) && !"AT".equals(nuevoEstado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado solicitado inválido.");
+        }
+        String nota = observacion == null ? "" : observacion.trim();
+        // La descripción del historial utiliza una columna VARCHAR(255).
+        if (nota.length() > 150) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La observación admite hasta 150 caracteres.");
         }
 
+        Reporte reporte = reporteRepositorio.buscarParaActualizar(idReporte)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reporte no encontrado."));
+        actualizarReporteServicio.verificarEntidad(reporte);
         String estadoActual = reporte.getEstado();
-
-
-        if ((estadoActual.equals("R") && nuevoEstado.equals("ER")) ||
-                (estadoActual.equals("ER") && nuevoEstado.equals("AT"))) {
-
-            reporte.setEstado(nuevoEstado);
-            Reporte reporteActualizado = reporteRepositorio.save(reporte);
-
-            Notificacion notiCiudadano = new Notificacion();
-            notiCiudadano.setReporte(reporteActualizado);
-            notiCiudadano.setUsuario(reporteActualizado.getCiudadano().getUsuario());
-            notiCiudadano.setTitulo("Actualización de Reporte");
-            notiCiudadano.setDescripcion("Tu reporte ha cambiado al estado: " + nuevoEstado);
-            notificacionServicio.insertar(notiCiudadano);
-
-            return reporteActualizado;
+        if (!("R".equals(estadoActual) && "ER".equals(nuevoEstado))
+                && !("ER".equals(estadoActual) && "AT".equals(nuevoEstado))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La transición no está permitida para el estado actual.");
         }
 
-        return null;
+        reporte.setEstado(nuevoEstado);
+        Reporte reporteActualizado = reporteRepositorio.save(reporte);
+        ActualizarReporte historial = new ActualizarReporte();
+        historial.setReporte(reporteActualizado);
+        historial.setDescripcionActu("Estado: " + estadoActual + " → " + nuevoEstado
+                + (nota.isEmpty() ? "" : ". Observación: " + nota));
+        actualizarReporteServicio.insertar(historial);
+
+        Notificacion notificacion = new Notificacion();
+        notificacion.setReporte(reporteActualizado);
+        notificacion.setUsuario(reporteActualizado.getCiudadano().getUsuario());
+        notificacion.setTitulo("Actualización de Reporte");
+        notificacion.setFechaNotificacion(historial.getFechaActualizacion());
+        notificacion.setDescripcion("Tu reporte ha cambiado al estado: " + nuevoEstado);
+        notificacionServicio.insertar(notificacion);
+        return reporteActualizado;
     }
 
     // para Ciudadano

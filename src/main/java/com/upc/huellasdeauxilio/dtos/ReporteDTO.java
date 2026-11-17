@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Getter
 @Setter
@@ -18,6 +19,9 @@ public class ReporteDTO {
     private String nivelUrgencia;
     private String descripcion;
     private String estado;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String observacion;
 
     private UbicacionDTO ubicacion;
     private CiudadanoDTO ciudadano;
