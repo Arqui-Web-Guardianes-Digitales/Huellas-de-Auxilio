@@ -7,6 +7,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,7 +24,7 @@ public class EvidenciaReporteControlador {
 
     @PostMapping("/evidenciareporte")
     @PreAuthorize("hasRole('CIUDADANO')")
-    public EvidenciaReporteDTO insertar(@RequestBody EvidenciaReporteDTO evidenciaDTO) {
+    public EvidenciaReporteDTO insertar(@Valid @RequestBody EvidenciaReporteDTO evidenciaDTO) {
         EvidenciaReporte evidencia = modelMapper.map(evidenciaDTO, EvidenciaReporte.class);
 
         evidencia = evidenciaReporteServicio.insertar(evidencia);
