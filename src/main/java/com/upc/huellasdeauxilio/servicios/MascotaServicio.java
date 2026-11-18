@@ -165,24 +165,7 @@ public class MascotaServicio {
                 || !autenticacion.getName().equals(entidad.getUsuario().getCorreo())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes publicar para tu propia entidad.");
         }
-        if (mascotaDTO == null || Arrays.asList(mascotaDTO.getNombre(), mascotaDTO.getEspecie(),
-                mascotaDTO.getEdad(), mascotaDTO.getSexo(), mascotaDTO.getDistrito(), mascotaDTO.getTamaño(),
-                mascotaDTO.getDescripcion(), mascotaDTO.getUrlFoto()).stream()
-                .anyMatch(valor -> valor == null || valor.isBlank() || valor.length() > 255)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa los campos obligatorios (máximo 255 caracteres).");
-        }
-        if (!List.of("perro", "gato").contains(normalizarFiltro(mascotaDTO.getEspecie()))
-                || !List.of("macho", "hembra").contains(normalizarFiltro(mascotaDTO.getSexo()))
-                || !List.of("pequeño", "mediano", "grande").contains(normalizarFiltro(mascotaDTO.getTamaño()))
-                || !List.of("san miguel", "miraflores", "san borja", "surco", "jesús maría", "pueblo libre", "lince")
-                        .contains(normalizarFiltro(mascotaDTO.getDistrito()))
-                || !edadValida(mascotaDTO.getEdad())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa la edad y las opciones seleccionadas.");
-        }
-        mascotaDTO.setNombre(mascotaDTO.getNombre().trim());
-        mascotaDTO.setDescripcion(mascotaDTO.getDescripcion().trim());
-        mascotaDTO.setEdad(mascotaDTO.getEdad().trim());
-        mascotaDTO.setUrlFoto(mascotaDTO.getUrlFoto().trim());
+        validarDatosMascota(mascotaDTO);
 
         // Convertir DTO a entidad
         Mascota mascota = modelMapper.map(mascotaDTO, Mascota.class);
@@ -206,6 +189,28 @@ public class MascotaServicio {
         return respuesta;
     }
 
+    private void validarDatosMascota(MascotaDTO mascotaDTO) {
+        if (mascotaDTO == null || Arrays.asList(mascotaDTO.getNombre(), mascotaDTO.getEspecie(),
+                mascotaDTO.getEdad(), mascotaDTO.getSexo(), mascotaDTO.getDistrito(), mascotaDTO.getTamaño(),
+                mascotaDTO.getDescripcion(), mascotaDTO.getUrlFoto()).stream()
+                .anyMatch(valor -> valor == null || valor.isBlank() || valor.length() > 255)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa los campos obligatorios (máximo 255 caracteres).");
+        }
+        if (!List.of("perro", "gato").contains(normalizarFiltro(mascotaDTO.getEspecie()))
+                || !List.of("macho", "hembra").contains(normalizarFiltro(mascotaDTO.getSexo()))
+                || !List.of("pequeño", "mediano", "grande").contains(normalizarFiltro(mascotaDTO.getTamaño()))
+                || !List.of("san miguel", "miraflores", "san borja", "surco", "jesús maría", "pueblo libre", "lince")
+                        .contains(normalizarFiltro(mascotaDTO.getDistrito()))
+                || !edadValida(mascotaDTO.getEdad())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa la edad y las opciones seleccionadas.");
+        }
+        mascotaDTO.setNombre(mascotaDTO.getNombre().trim());
+        mascotaDTO.setDescripcion(mascotaDTO.getDescripcion().trim());
+        mascotaDTO.setEdad(mascotaDTO.getEdad().trim());
+        mascotaDTO.setUrlFoto(mascotaDTO.getUrlFoto().trim());
+
+    }
+
     private boolean edadValida(String edad) {
         String valor = normalizarFiltro(edad);
         // Compatibilidad con clientes y registros anteriores, sin inventar una edad exacta.
@@ -224,38 +229,22 @@ public class MascotaServicio {
 
     public MascotaDTO editarMascota(Long idMascota, MascotaDTO datosMascota) {
 
-        if (datosMascota == null
-                || datosMascota.getNombre() == null
-                || datosMascota.getNombre().isBlank()
-                || datosMascota.getEspecie() == null
-                || datosMascota.getEspecie().isBlank()
-                || datosMascota.getEdad() == null
-                || datosMascota.getEdad().isBlank()
-                || datosMascota.getSexo() == null
-                || datosMascota.getSexo().isBlank()
-                || datosMascota.getDistrito() == null
-                || datosMascota.getDistrito().isBlank()
-                || datosMascota.getTamaño() == null
-                || datosMascota.getTamaño().isBlank()
-                || datosMascota.getDescripcion() == null
-                || datosMascota.getDescripcion().isBlank()
-                || datosMascota.getUrlFoto() == null
-                || datosMascota.getUrlFoto().isBlank()) {
-
-            return null;
+        Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
+        if (autenticacion == null || !autenticacion.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión inválida.");
         }
-
-        if (idMascota == null) {
-            return null;
+        if (idMascota == null || idMascota <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de mascota inválido.");
         }
-
-        Mascota mascota = mascotaRepositorio
-                .findById(idMascota)
-                .orElse(null);
-
-        if (mascota == null) {
-            return null;
+        Mascota mascota = mascotaRepositorio.findById(idMascota)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mascota no encontrada."));
+        boolean esEntidad = autenticacion.getAuthorities().stream()
+                .anyMatch(rol -> "ROLE_ENTIDAD".equals(rol.getAuthority()));
+        if (!esEntidad || mascota.getEntidad() == null || mascota.getEntidad().getUsuario() == null
+                || !autenticacion.getName().equals(mascota.getEntidad().getUsuario().getCorreo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes editar mascotas de tu propia entidad.");
         }
+        validarDatosMascota(datosMascota);
 
         // Actualizar únicamente los atributos editables
         mascota.setNombre(datosMascota.getNombre());
