@@ -24,5 +24,13 @@ public class SolicitudDTO {
     private Boolean experiencia;
     private String estadoSolicitud;
 
+    // Información de consulta para las pantallas de entidad (no se acepta al registrar).
+    private String nombreSolicitante;
+    private String distritoSolicitante;
+    private String especieMascota;
+    private String dniSolicitante;
+    private String correoSolicitante;
+    private String telefonoSolicitante;
+
 
 }

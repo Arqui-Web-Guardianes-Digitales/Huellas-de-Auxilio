@@ -2,6 +2,12 @@ package com.upc.huellasdeauxilio.servicios;
 
 import com.upc.huellasdeauxilio.dtos.SolicitudDTO;
 import com.upc.huellasdeauxilio.entidades.Ciudadano;
+import com.upc.huellasdeauxilio.entidades.Entidad;
+import com.upc.huellasdeauxilio.repositorios.EntidadRepositorio;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 import com.upc.huellasdeauxilio.entidades.Mascota;
 import com.upc.huellasdeauxilio.entidades.Notificacion;
 import com.upc.huellasdeauxilio.entidades.Solicitud;
@@ -36,6 +42,8 @@ public class SolicitudServicio {
     private ModelMapper modelMapper;
     @Autowired
     private MascotaRepositorio mascotaRepositorio;
+    @Autowired
+    private EntidadRepositorio entidadRepositorio;
 
     @Transactional
     public SolicitudDTO insertar(Long idCiudadano, SolicitudDTO solicitudDTO)
@@ -207,34 +215,17 @@ public class SolicitudServicio {
     }
 
     public List<SolicitudDTO> listarPorMascota(Long idMascota) {
-        if (idMascota == null) {
-            return null;
-        }
-        Mascota mascota = mascotaRepositorio.findById(idMascota).orElse(null);
-
-        if (mascota == null)
-        {
-            return null;
-        }
+        verificarMascota(idMascota);
 
         return solicitudRepositorio.findByMascota_IdMascotaOrderByFechaSolicitudDesc(idMascota).stream()
-                .map(solicitud -> {SolicitudDTO dto = modelMapper.map(solicitud, SolicitudDTO.class);
-                    dto.setMascotaIdMascota(solicitud.getMascota().getIdMascota());
-                    dto.setCiudadanoIdCiudadano(solicitud.getCiudadano().getIdCiudadano());
-                    return dto;}).collect(Collectors.toList());
+                .map(this::convertirParaEntidad).collect(Collectors.toList());
     }
 
     public SolicitudDTO buscarPorSolicitudYMascota(Long idSolicitud, Long idMascota) {
-        if (idSolicitud == null || idMascota == null)
-        {
-            return null;
-        }
+        verificarMascota(idMascota);
 
-        Mascota mascota = mascotaRepositorio.findById(idMascota).orElse(null);
-
-        if (mascota == null)
-        {
-            return null;
+        if (idSolicitud == null || idSolicitud <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de solicitud inválido.");
         }
 
         Solicitud solicitud = solicitudRepositorio.findByIdSolicitudAndMascota_IdMascota(idSolicitud, idMascota);
@@ -244,13 +235,22 @@ public class SolicitudServicio {
             return null;
         }
 
-        SolicitudDTO dto = modelMapper.map(solicitud, SolicitudDTO.class);
+        SolicitudDTO dto = convertirParaEntidad(solicitud);
+        Ciudadano ciudadano = solicitud.getCiudadano();
+        if (ciudadano != null) {
+            dto.setDniSolicitante(ciudadano.getDni());
+            if (ciudadano.getUsuario() != null) {
+                dto.setCorreoSolicitante(ciudadano.getUsuario().getCorreo());
+                dto.setTelefonoSolicitante(ciudadano.getUsuario().getTelefono());
+            }
+        }
         dto.setMascotaIdMascota(solicitud.getMascota().getIdMascota());
         dto.setCiudadanoIdCiudadano(solicitud.getCiudadano().getIdCiudadano());
         return dto;
     }
 
     public List<SolicitudDTO> listarPorEntidad(Long idEntidad) {
+        verificarEntidad(idEntidad);
 
         if (idEntidad == null) {
             return null;
@@ -259,22 +259,12 @@ public class SolicitudServicio {
         return solicitudRepositorio
                 .findByMascota_Entidad_IdEntidadOrderByFechaSolicitudDesc(idEntidad)
                 .stream()
-                .map(this::convertirADTO)
+                .map(this::convertirParaEntidad)
                 .collect(Collectors.toList());
     }
 
     public List<SolicitudDTO> filtrarSolicitudesPorMascota(Long idMascota, String codigo, String estado) {
-        if (idMascota == null) {
-            return null;
-        }
-
-        Mascota mascota = mascotaRepositorio
-                .findById(idMascota)
-                .orElse(null);
-
-        if (mascota == null) {
-            return null;
-        }
+        verificarMascota(idMascota);
 
         String estadoFiltro = normalizarFiltro(estado);
 
@@ -286,10 +276,7 @@ public class SolicitudServicio {
         }
 
         return solicitudRepositorio.filtrarSolicitudesPorMascota(idMascota, normalizarFiltro(codigo), estadoFiltro).stream()
-                .map(solicitud -> {SolicitudDTO dto = modelMapper.map(solicitud, SolicitudDTO.class);
-                    dto.setMascotaIdMascota(solicitud.getMascota().getIdMascota());dto.setCiudadanoIdCiudadano(solicitud.getCiudadano().getIdCiudadano());
-                    return dto;
-                }).collect(Collectors.toList());
+                .map(this::convertirParaEntidad).collect(Collectors.toList());
     }
 
     private Ciudadano buscarCiudadano(Long idCiudadano) {
@@ -308,6 +295,7 @@ public class SolicitudServicio {
             String estado,
             String especie
     ) {
+        verificarEntidad(idEntidad);
         if (idEntidad == null) {
             return null;
         }
@@ -336,29 +324,15 @@ public class SolicitudServicio {
                         especieFiltro
                 )
                 .stream()
-                .map(this::convertirADTO)
+                .map(this::convertirParaEntidad)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public SolicitudDTO rechazarSolicitud(Long idSolicitud) {
 
-        if (idSolicitud == null) {
-            return null;
-        }
+        Solicitud solicitud = buscarSolicitudGestionable(idSolicitud);
 
-        Solicitud solicitud = solicitudRepositorio
-                .findById(idSolicitud)
-                .orElse(null);
-
-        if (solicitud == null) {
-            return null;
-        }
-
-        //solo se puede gestionar una solicitud que está en revisión
-        if (!"EN_REVISION".equals(solicitud.getEstadoSolicitud())) {
-            return null;
-        }
 
         solicitud.setEstadoSolicitud("RECHAZADA");
 
@@ -392,27 +366,17 @@ public class SolicitudServicio {
     @Transactional
     public SolicitudDTO aprobarSolicitud(Long idSolicitud) {
 
-        if (idSolicitud == null) {
-            return null;
-        }
+        Solicitud solicitud = buscarSolicitudGestionable(idSolicitud);
 
-        Solicitud solicitud = solicitudRepositorio
-                .findById(idSolicitud)
-                .orElse(null);
-
-        if (solicitud == null) {
-            return null;
-        }
-
-        //solo se puede gestionar una solicitud que está en revisión
-        if (!"EN_REVISION".equals(solicitud.getEstadoSolicitud())) {
-            return null;
-        }
 
         Mascota mascota = solicitud.getMascota();
 
         if (mascota == null) {
             return null;
+        }
+
+        if (!Boolean.TRUE.equals(mascota.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La mascota ya no está disponible.");
         }
 
         //aprobar la solicitud seleccionada
@@ -486,6 +450,61 @@ public class SolicitudServicio {
         }
 
         return convertirADTO(solicitudAprobada);
+    }
+
+    private Solicitud buscarSolicitudGestionable(Long idSolicitud) {
+        if (idSolicitud == null || idSolicitud <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de solicitud inválido.");
+        }
+        Solicitud solicitud = solicitudRepositorio.findById(idSolicitud)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Solicitud no encontrada."));
+        verificarPropietario(solicitud.getMascota() == null ? null : solicitud.getMascota().getEntidad());
+        if (!"EN_REVISION".equals(solicitud.getEstadoSolicitud())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud ya fue gestionada.");
+        }
+        return solicitud;
+    }
+
+    private void verificarEntidad(Long idEntidad) {
+        if (idEntidad == null || idEntidad <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de entidad inválido.");
+        }
+        Entidad entidad = entidadRepositorio.findById(idEntidad)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entidad no encontrada."));
+        verificarPropietario(entidad);
+    }
+
+    private Mascota verificarMascota(Long idMascota) {
+        if (idMascota == null || idMascota <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de mascota inválido.");
+        }
+        Mascota mascota = mascotaRepositorio.findById(idMascota)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mascota no encontrada."));
+        verificarPropietario(mascota.getEntidad());
+        return mascota;
+    }
+
+    private void verificarPropietario(Entidad entidad) {
+        Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
+        if (autenticacion == null || !autenticacion.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión inválida.");
+        }
+        boolean esEntidad = autenticacion.getAuthorities().stream()
+                .anyMatch(rol -> "ROLE_ENTIDAD".equals(rol.getAuthority()));
+        if (!esEntidad || entidad == null || entidad.getUsuario() == null
+                || !autenticacion.getName().equals(entidad.getUsuario().getCorreo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes consultar o gestionar solicitudes de tu entidad.");
+        }
+    }
+
+    private SolicitudDTO convertirParaEntidad(Solicitud solicitud) {
+        SolicitudDTO dto = convertirADTO(solicitud);
+        if (solicitud.getCiudadano() != null) {
+            dto.setNombreSolicitante(solicitud.getCiudadano().getNombreCompleto());
+            dto.setDistritoSolicitante(solicitud.getCiudadano().getDistrito());
+        }
+        if (solicitud.getMascota() != null) dto.setEspecieMascota(solicitud.getMascota().getEspecie());
+        return dto;
     }
 
     private SolicitudDTO convertirADTO(Solicitud solicitud) {

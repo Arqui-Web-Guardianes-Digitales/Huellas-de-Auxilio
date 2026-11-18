@@ -131,6 +131,34 @@ class MascotaPublicacionTest {
     }
 
     @Test
+    void editaSinCambiarEntidadDisponibilidadNiEdadCategorica() {
+        Mascota mascota = new Mascota();
+        mascota.setIdMascota(7L);
+        mascota.setEntidad(entidades.findById(1L).orElseThrow());
+        mascota.setEstado(false);
+        when(mascotas.findById(7L)).thenReturn(Optional.of(mascota));
+        doAnswer(invocacion -> invocacion.getArgument(0)).when(mascotas).save(any());
+        datos.setEstado(true);
+        datos.setEntidadIdEntidad(999L);
+        datos.setEdad("Adulto");
+        MascotaDTO respuesta = servicio.editarMascota(7L, datos);
+        assertFalse(respuesta.getEstado());
+        assertEquals(1L, respuesta.getEntidadIdEntidad());
+        assertEquals("Adulto", respuesta.getEdad());
+        assertEquals(datos.getUrlFoto(), respuesta.getUrlFoto());
+    }
+
+    @Test
+    void impideEditarMascotaAjenaSinGuardar() {
+        Mascota mascota = new Mascota();
+        mascota.setEntidad(new Entidad());
+        when(mascotas.findById(7L)).thenReturn(Optional.of(mascota));
+        assertEquals(403, assertThrows(ResponseStatusException.class,
+                () -> servicio.editarMascota(7L, datos)).getStatusCode().value());
+        verify(mascotas, never()).save(any());
+    }
+
+    @Test
     void exigeFotoYDescripcionValidas() {
         datos.setUrlFoto("");
         assertEquals(400, assertThrows(ResponseStatusException.class,
