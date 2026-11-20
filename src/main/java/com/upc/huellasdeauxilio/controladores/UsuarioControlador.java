@@ -1,6 +1,7 @@
 package com.upc.huellasdeauxilio.controladores;
 
 import com.upc.huellasdeauxilio.dtos.UsuarioDTO;
+import com.upc.huellasdeauxilio.dtos.ContactoUsuarioDTO;
 import com.upc.huellasdeauxilio.entidades.Rol;
 import com.upc.huellasdeauxilio.entidades.Usuario;
 import com.upc.huellasdeauxilio.servicios.UsuarioServicio;
@@ -82,6 +83,45 @@ public class UsuarioControlador {
         return convertirADTO(usuario);
     }
 
+    //EndPoint creado para el desarrollo de la HU08
+    @GetMapping("/usuario/{idUsuario}/contacto")
+    @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
+    public UsuarioDTO buscarContactoPorId(
+            @PathVariable Long idUsuario) {
+
+        Usuario usuario = usuarioServicio.buscarPorId(idUsuario);
+
+        if (usuario == null) {
+            return null;
+        }
+
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+
+        usuarioDTO.setIdUsuario(usuario.getIdUsuario());
+        usuarioDTO.setTelefono(usuario.getTelefono());
+
+        return usuarioDTO;
+    }
+
+    @PutMapping("/usuario/perfil/contacto/{idUsuario}")
+    @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
+    public String actualizarContacto(
+            @PathVariable Long idUsuario,
+            @RequestBody ContactoUsuarioDTO contactoDTO) {
+
+        Usuario actualizado = usuarioServicio.actualizarContacto(
+                idUsuario,
+                contactoDTO.getCorreo(),
+                contactoDTO.getTelefono()
+        );
+
+        if (actualizado == null) {
+            return "No se pudo actualizar el contacto";
+        }
+
+        return "Contacto actualizado correctamente";
+    }
+
     // HU04
     @PutMapping("/usuario/contrasena/{correo}")
     @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
@@ -98,21 +138,26 @@ public class UsuarioControlador {
         return convertirADTO(usuario);
     }
 
-    // HU22 - ya existía en el proyecto
+    //Eliminado Logico modificado para el funcionamiento con el frontend.
     @PutMapping("/usuario/usuario/{id}")
     @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
     public UsuarioDTO eliminadoLogico(
             @RequestBody UsuarioDTO usuarioDTO,
             @PathVariable Long id) {
 
-        Usuario usuario =
-                usuarioServicio.eliminadoLogico(
-                        usuarioDTO.getCorreo(),
-                        usuarioDTO.getContraseña(),
-                        id
-                );
+        Usuario usuario = usuarioServicio.eliminadoLogico(
+                usuarioDTO.getCorreo(),
+                usuarioDTO.getContraseña(),
+                id
+        );
 
-        return convertirADTO(usuario);
+        if (usuario == null) {
+            return null;
+        } else {
+            UsuarioDTO respuesta = convertirADTO(usuario);
+            respuesta.setContraseña(null);
+            return respuesta;
+        }
     }
 
     // HU21 / HU24 - ya existía

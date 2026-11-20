@@ -49,7 +49,7 @@ public class EntidadServicio {
     }
 
     public List<Entidad> listarTodas() {
-        return entidadRepositorio.findAll();
+        return entidadRepositorio.findByUsuario_EstadoUsuarioTrue();
     }
 
     public Entidad buscarPorId(Long idEntidad) {
