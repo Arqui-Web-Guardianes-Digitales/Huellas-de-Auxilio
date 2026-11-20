@@ -106,6 +106,7 @@ public class EntidadControlador {
                 .collect(Collectors.toList());
     }
 
+    //Listar todas las entidades: Importate para la HU08
     @GetMapping("/entidades")
     @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
     public List<EntidadDTO> listarTodas() {
@@ -145,6 +146,8 @@ public class EntidadControlador {
                 .map(this::convertirADTO)
                 .collect(Collectors.toList());
     }
+
+
 
     @PutMapping("/entidades/{Id}")
     @PreAuthorize("hasRole('ENTIDAD')")

@@ -6,7 +6,6 @@ import com.upc.huellasdeauxilio.repositorios.CiudadanoRepositorio;
 import com.upc.huellasdeauxilio.repositorios.UsuarioRepositorio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CiudadanoServicio {
@@ -55,45 +54,39 @@ public class CiudadanoServicio {
         return ciudadanoRepositorio.findById(idCiudadano).orElse(null);
     }
 
-    @Transactional
     public Ciudadano actualizarPerfil(
             Long idCiudadano,
             Ciudadano datos
     ) {
         //validar los datos obligatorios
-        if (datos == null
+        if (idCiudadano == null
+                || datos == null
                 || datos.getNombreCompleto() == null
                 || datos.getNombreCompleto().isBlank()
+                || datos.getDni() == null
+                || !datos.getDni().matches("\\d{8}")
                 || datos.getDistrito() == null
-                || datos.getDistrito().isBlank()
-                || datos.getUsuario() == null
-                || datos.getUsuario().getCorreo() == null
-                || datos.getUsuario().getCorreo().isBlank()
-                || datos.getUsuario().getTelefono() == null
-                || datos.getUsuario().getTelefono().isBlank()) {
+                || datos.getDistrito().isBlank()) {
 
             return null;
         }
 
         Ciudadano ciudadano = obtenerPerfil(idCiudadano);
 
-        if (ciudadano == null || ciudadano.getUsuario() == null) {
+        if (ciudadano == null) {
             return null;
         }
 
-        Usuario usuario = ciudadano.getUsuario();
-
-        String correo = datos.getUsuario().getCorreo().trim();
-
+        Ciudadano ciudadanoConDni = ciudadanoRepositorio.findByDni(datos.getDni());
+        if (ciudadanoConDni != null
+                && !ciudadanoConDni.getIdCiudadano().equals(idCiudadano)) {
+            return null;
+        }
 
         //actualizar únicamente los campos permitidos
         ciudadano.setNombreCompleto(datos.getNombreCompleto().trim());
+        ciudadano.setDni(datos.getDni());
         ciudadano.setDistrito(datos.getDistrito().trim());
-
-        usuario.setCorreo(correo);
-        usuario.setTelefono(datos.getUsuario().getTelefono().trim());
-
-        usuarioRepositorio.save(usuario);
 
         return ciudadanoRepositorio.save(ciudadano);
     }
