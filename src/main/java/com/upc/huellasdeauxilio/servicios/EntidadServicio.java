@@ -114,12 +114,8 @@ public class EntidadServicio {
             if(sitioweb != null){
                 entidad.setSitioWeb(sitioweb);
             }
-            if(fechainicioatencion != null){
-                entidad.setFechaAtencionInicio(fechainicioatencion);
-            }
-            if(fechafinalatencion != null){
-                entidad.setFechaAtencionFinal(fechafinalatencion);
-            }
+            entidad.setFechaAtencionInicio(fechainicioatencion);
+            entidad.setFechaAtencionFinal(fechafinalatencion);
             if(diasatencion != null){
                 entidad.setDiasAtencion(diasatencion);
             }

@@ -12,7 +12,7 @@ INSERT INTO usuario (correo, telefono, contraseña, estado_usuario, id_rol) VALU
 INSERT INTO ciudadano (dni, distrito, nombre_completo, id_usuario) VALUES ('12345678', 'San Miguel', 'Juan Perez', 1);
 INSERT INTO ciudadano (dni, distrito, nombre_completo, id_usuario) VALUES ('87654321', 'Miraflores', 'Maria Lopez', 2);
 
-INSERT INTO entidad (nombre_entidad, tipo_entidad, zona_atencion, id_usuario, latitud, longitud) VALUES ('Refugio Patitas', 'Refugio', 'San Miguel', 3, -12.0765, -77.0943);
+INSERT INTO entidad (nombre_entidad, tipo_entidad, zona_atencion, id_usuario, latitud, longitud) VALUES ('Refugio Patitas', 'Refugio', 'San Miguel', 3, -12.0605, -77.0943);
 INSERT INTO entidad (nombre_entidad, tipo_entidad, zona_atencion, id_usuario, latitud, longitud) VALUES ('Veterinaria Central', 'Veterinaria', 'Miraflores', 4, -12.1220, -77.0310);
 
 --UBICACIONES DE REPORTES

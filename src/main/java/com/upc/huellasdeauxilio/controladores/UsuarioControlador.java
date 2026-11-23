@@ -103,6 +103,7 @@ public class UsuarioControlador {
         return usuarioDTO;
     }
 
+    //ENDPOINT CREADO PARA LA ACTUALIZACION DE LOS CONTACTOS-HU19-22
     @PutMapping("/usuario/perfil/contacto/{idUsuario}")
     @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
     public String actualizarContacto(

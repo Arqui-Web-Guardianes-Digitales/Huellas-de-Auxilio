@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 public class NotificacionServicio {
@@ -25,6 +26,9 @@ public class NotificacionServicio {
     public Notificacion insertar(Notificacion notificacion) {
 
         notificacion.setEstadoNotificacion(false);
+        if (notificacion.getFechaNotificacion() == null) {
+            notificacion.setFechaNotificacion(LocalDateTime.now());
+        }
 
         return notificacionRepositorio.save(notificacion);
     }

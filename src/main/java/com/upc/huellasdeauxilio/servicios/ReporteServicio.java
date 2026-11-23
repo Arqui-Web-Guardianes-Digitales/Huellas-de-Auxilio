@@ -1,6 +1,8 @@
 package com.upc.huellasdeauxilio.servicios;
 
 import com.upc.huellasdeauxilio.entidades.Entidad;
+import com.upc.huellasdeauxilio.entidades.Ciudadano;
+import com.upc.huellasdeauxilio.repositorios.CiudadanoRepositorio;
 import com.upc.huellasdeauxilio.entidades.ActualizarReporte;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
@@ -35,7 +37,21 @@ public class ReporteServicio {
     @Autowired
     private EntidadServicio entidadServicio;
 
+    @Autowired
+    private CiudadanoRepositorio ciudadanoRepositorio;
+
     public Reporte insertar(Reporte reporte) {
+
+        //Busqueda de un ciudadano completo antes de continuar.
+
+        if (reporte.getCiudadano() == null || reporte.getCiudadano().getIdCiudadano() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta el ciudadano del reporte.");
+        }
+        Ciudadano ciudadano = ciudadanoRepositorio.findById(reporte.getCiudadano().getIdCiudadano()).orElse(null);
+        if (ciudadano == null || ciudadano.getUsuario() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró el usuario del ciudadano.");
+        }
+        reporte.setCiudadano(ciudadano);
 
         Ubicacion ubicacion = ubicacionRepositorio.findById(reporte.getUbicacion().getIdUbicacion()).orElse(null);
 
@@ -104,6 +120,16 @@ public class ReporteServicio {
         notificacion.setFechaNotificacion(historial.getFechaActualizacion());
         notificacion.setDescripcion("Tu reporte ha cambiado al estado: " + nuevoEstado);
         notificacionServicio.insertar(notificacion);
+
+        //Creacion de la notificacion para la entidad
+        if (reporteActualizado.getEntidad() != null && reporteActualizado.getEntidad().getUsuario() != null) {
+            Notificacion avisoEntidad = new Notificacion();
+            avisoEntidad.setReporte(reporteActualizado);
+            avisoEntidad.setUsuario(reporteActualizado.getEntidad().getUsuario());
+            avisoEntidad.setTitulo("Actualización de reporte asignado");
+            avisoEntidad.setDescripcion("El reporte HA-" + reporteActualizado.getIdReporte() + " cambió al estado: " + nuevoEstado);
+            notificacionServicio.insertar(avisoEntidad);
+        }
         return reporteActualizado;
     }
 
