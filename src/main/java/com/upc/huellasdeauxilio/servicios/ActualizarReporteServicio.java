@@ -2,6 +2,7 @@ package com.upc.huellasdeauxilio.servicios;
 
 import com.upc.huellasdeauxilio.entidades.ActualizarReporte;
 import com.upc.huellasdeauxilio.entidades.Reporte;
+import com.upc.huellasdeauxilio.entidades.Entidad;
 import com.upc.huellasdeauxilio.repositorios.ActualizarReporteRepositorio;
 import com.upc.huellasdeauxilio.repositorios.ReporteRepositorio;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,14 +26,18 @@ public class ActualizarReporteServicio {
     private ReporteRepositorio reporteRepositorio;
 
     public void verificarEntidad(Reporte reporte) {
+        verificarEntidad(reporte.getEntidad());
+    }
+
+    public void verificarEntidad(Entidad entidad) {
         Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
         if (autenticacion == null || !autenticacion.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión inválida.");
         }
         boolean esEntidad = autenticacion.getAuthorities().stream()
                 .anyMatch(rol -> "ROLE_ENTIDAD".equals(rol.getAuthority()));
-        if (!esEntidad || reporte.getEntidad() == null || reporte.getEntidad().getUsuario() == null
-                || !autenticacion.getName().equals(reporte.getEntidad().getUsuario().getCorreo())) {
+        if (!esEntidad || entidad == null || entidad.getUsuario() == null
+                || !autenticacion.getName().equals(entidad.getUsuario().getCorreo())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "El reporte no pertenece a tu entidad.");
         }
     }
