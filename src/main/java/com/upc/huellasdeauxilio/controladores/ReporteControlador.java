@@ -1,6 +1,7 @@
 package com.upc.huellasdeauxilio.controladores;
 
 import com.upc.huellasdeauxilio.dtos.ReporteDTO;
+import com.upc.huellasdeauxilio.dtos.EstadoReporteDTO;
 import com.upc.huellasdeauxilio.entidades.Reporte;
 import com.upc.huellasdeauxilio.servicios.ReporteServicio;
 import org.modelmapper.ModelMapper;
@@ -34,7 +35,7 @@ public class ReporteControlador {
     @PutMapping("/reporte/estado/{idReporte}")
     @PreAuthorize("hasRole('ENTIDAD')")
     public ReporteDTO actualizarEstado(@PathVariable Long idReporte,
-                                       @RequestBody ReporteDTO reporteDTO) {
+                                       @Valid @RequestBody EstadoReporteDTO reporteDTO) {
         Reporte reporteActualizado = reporteServicio.actualizarEstado(idReporte, reporteDTO.getEstado(), reporteDTO.getObservacion());
         return (reporteActualizado != null) ? modelMapper.map(reporteActualizado, ReporteDTO.class) : null;
     }

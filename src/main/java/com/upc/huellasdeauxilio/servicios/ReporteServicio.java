@@ -3,6 +3,7 @@ package com.upc.huellasdeauxilio.servicios;
 import com.upc.huellasdeauxilio.entidades.Entidad;
 import com.upc.huellasdeauxilio.entidades.Ciudadano;
 import com.upc.huellasdeauxilio.repositorios.CiudadanoRepositorio;
+import com.upc.huellasdeauxilio.repositorios.EntidadRepositorio;
 import com.upc.huellasdeauxilio.entidades.ActualizarReporte;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,9 @@ public class ReporteServicio {
 
     @Autowired
     private CiudadanoRepositorio ciudadanoRepositorio;
+
+    @Autowired
+    private EntidadRepositorio entidadRepositorio;
 
     public Reporte insertar(Reporte reporte) {
 
@@ -160,10 +164,12 @@ public class ReporteServicio {
 
     // para  Entidad
     public List<Reporte> listarPorEntidad(Long idEntidad) {
+        verificarEntidadConsultada(idEntidad);
         return reporteRepositorio.findByEntidad_IdEntidadOrderByFechaReporteDesc(idEntidad);
     }
 
     public Map<String, Long> obtenerResumenEntidad(Long idEntidad) {
+        verificarEntidadConsultada(idEntidad);
         long total = reporteRepositorio.countByEntidad_IdEntidad(idEntidad);
         long enRevision = reporteRepositorio.countByEntidad_IdEntidadAndEstado(idEntidad, "ER");
         long atendidos = reporteRepositorio.countByEntidad_IdEntidadAndEstado(idEntidad, "AT");
@@ -176,12 +182,28 @@ public class ReporteServicio {
     }
 
     public List<Reporte> filtrarReportesEntidad(Long idEntidad, String estado, String urgencia, String distrito) {
+        verificarEntidadConsultada(idEntidad);
         return reporteRepositorio.filtrarReportesPorEntidad(idEntidad, estado, urgencia, distrito);
     }
 
     //Buscar Por Id cuando una entidad requiera de visualizar una entidads
     public Reporte buscarPorId(Long Id){
 
-        return reporteRepositorio.findById(Id).orElse(null);
+        if (Id == null || Id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de reporte inválido.");
+        }
+        Reporte reporte = reporteRepositorio.findById(Id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reporte no encontrado."));
+        actualizarReporteServicio.verificarEntidad(reporte);
+        return reporte;
     }
+    private void verificarEntidadConsultada(Long idEntidad) {
+        if (idEntidad == null || idEntidad <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de entidad inválido.");
+        }
+        Entidad entidad = entidadRepositorio.findById(idEntidad)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entidad no encontrada."));
+        actualizarReporteServicio.verificarEntidad(entidad);
+    }
+
 }
