@@ -21,6 +21,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import javax.imageio.ImageIO;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api")
@@ -28,6 +30,9 @@ public class ArchivoControlador {
 
     // El nombre de la carpeta en la raíz del proyecto, osea al lado de pom.xml
     private final String CARPETA_IMAGENES = "imagenes";
+
+    @Value("${app.public-url:http://localhost:8088}")
+    private String urlPublica;
 
     @PostMapping(value = "/archivos/subir", consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
@@ -57,7 +62,8 @@ public class ArchivoControlador {
             Files.copy(archivo.getInputStream(), rutaFisica);
 
             // 5 generar la URL con la que Angular podrá ver la imagen
-            String urlImagen = "http://localhost:8088/imagenes/" + nombreUnico;
+            String urlImagen = UriComponentsBuilder.fromUriString(urlPublica)
+                    .pathSegment("imagenes", nombreUnico).build().encode().toUriString();
 
             // 6 devolver la URL
             respuesta.put("url", urlImagen);
