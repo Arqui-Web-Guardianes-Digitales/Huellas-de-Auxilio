@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Arrays;
+import jakarta.validation.Validator;
+import jakarta.validation.ConstraintViolationException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,9 @@ public class MascotaServicio {
 
     @Autowired
     private EntidadRepositorio entidadRepositorio;
+
+    @Autowired
+    private Validator validator;
 
     public List<MascotaDTO> listarDisponibles() {
         return mascotaRepositorio.findByEstadoTrue().stream().
@@ -190,19 +194,13 @@ public class MascotaServicio {
     }
 
     private void validarDatosMascota(MascotaDTO mascotaDTO) {
-        if (mascotaDTO == null || Arrays.asList(mascotaDTO.getNombre(), mascotaDTO.getEspecie(),
-                mascotaDTO.getEdad(), mascotaDTO.getSexo(), mascotaDTO.getDistrito(), mascotaDTO.getTamaño(),
-                mascotaDTO.getDescripcion(), mascotaDTO.getUrlFoto()).stream()
-                .anyMatch(valor -> valor == null || valor.isBlank() || valor.length() > 255)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa los campos obligatorios (máximo 255 caracteres).");
+        if (mascotaDTO == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa los datos de la mascota.");
         }
-        if (!List.of("perro", "gato").contains(normalizarFiltro(mascotaDTO.getEspecie()))
-                || !List.of("macho", "hembra").contains(normalizarFiltro(mascotaDTO.getSexo()))
-                || !List.of("pequeño", "mediano", "grande").contains(normalizarFiltro(mascotaDTO.getTamaño()))
-                || !List.of("san miguel", "miraflores", "san borja", "surco", "jesús maría", "pueblo libre", "lince")
-                        .contains(normalizarFiltro(mascotaDTO.getDistrito()))
-                || !edadValida(mascotaDTO.getEdad())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa la edad y las opciones seleccionadas.");
+        var errores = validator.validate(mascotaDTO);
+        if (!errores.isEmpty()) throw new ConstraintViolationException(errores);
+        if (!edadValida(mascotaDTO.getEdad())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La edad debe ser positiva en meses o años, o conservar su categoría anterior.");
         }
         mascotaDTO.setNombre(mascotaDTO.getNombre().trim());
         mascotaDTO.setDescripcion(mascotaDTO.getDescripcion().trim());

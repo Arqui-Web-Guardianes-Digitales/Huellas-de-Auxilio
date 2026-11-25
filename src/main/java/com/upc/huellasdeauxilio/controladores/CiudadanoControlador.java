@@ -112,7 +112,7 @@ public class CiudadanoControlador {
                 )
         );
     }
-
+    
     @PutMapping("/ciudadano/perfil/{idCiudadano}")
     @PreAuthorize("hasRole('CIUDADANO')")
     public String actualizarPerfil(

@@ -17,6 +17,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import jakarta.validation.Validation;
+import jakarta.validation.ValidatorFactory;
+import jakarta.validation.ConstraintViolationException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +29,7 @@ import static org.mockito.Mockito.*;
 // Sin contexto de Spring ni conexión a PostgreSQL.
 class MascotaPublicacionTest {
     private MascotaServicio servicio;
+    private ValidatorFactory factory;
     private MascotaRepositorio mascotas;
     private EntidadRepositorio entidades;
     private MascotaDTO datos;
@@ -33,6 +37,8 @@ class MascotaPublicacionTest {
     @BeforeEach
     void preparar() {
         servicio = new MascotaServicio();
+        factory = Validation.buildDefaultValidatorFactory();
+        ReflectionTestUtils.setField(servicio, "validator", factory.getValidator());
         mascotas = mock(MascotaRepositorio.class);
         entidades = mock(EntidadRepositorio.class);
         ReflectionTestUtils.setField(servicio, "mascotaRepositorio", mascotas);
@@ -66,6 +72,7 @@ class MascotaPublicacionTest {
     @AfterEach
     void limpiar() {
         SecurityContextHolder.clearContext();
+        factory.close();
     }
 
     @Test
@@ -99,8 +106,7 @@ class MascotaPublicacionTest {
         assertEquals(404, assertThrows(ResponseStatusException.class,
                 () -> servicio.publicarMascota(3L, datos)).getStatusCode().value());
         datos.setNombre("   ");
-        assertEquals(400, assertThrows(ResponseStatusException.class,
-                () -> servicio.publicarMascota(1L, datos)).getStatusCode().value());
+        assertThrows(ConstraintViolationException.class, () -> servicio.publicarMascota(1L, datos));
         verify(mascotas, never()).save(any());
     }
 
@@ -113,12 +119,10 @@ class MascotaPublicacionTest {
         }
         datos.setEdad("6 meses");
         datos.setEspecie("Otra especie");
-        assertEquals(400, assertThrows(ResponseStatusException.class,
-                () -> servicio.publicarMascota(1L, datos)).getStatusCode().value());
+        assertThrows(ConstraintViolationException.class, () -> servicio.publicarMascota(1L, datos));
         datos.setEspecie("Gato");
         datos.setDistrito("Magdalena del Mar");
-        assertEquals(400, assertThrows(ResponseStatusException.class,
-                () -> servicio.publicarMascota(1L, datos)).getStatusCode().value());
+        assertThrows(ConstraintViolationException.class, () -> servicio.publicarMascota(1L, datos));
         verify(mascotas, never()).save(any());
     }
 
@@ -161,12 +165,10 @@ class MascotaPublicacionTest {
     @Test
     void exigeFotoYDescripcionValidas() {
         datos.setUrlFoto("");
-        assertEquals(400, assertThrows(ResponseStatusException.class,
-                () -> servicio.publicarMascota(1L, datos)).getStatusCode().value());
+        assertThrows(ConstraintViolationException.class, () -> servicio.publicarMascota(1L, datos));
         datos.setUrlFoto("http://localhost:8088/imagenes/foto-de-prueba.png");
         datos.setDescripcion("a".repeat(256));
-        assertEquals(400, assertThrows(ResponseStatusException.class,
-                () -> servicio.publicarMascota(1L, datos)).getStatusCode().value());
+        assertThrows(ConstraintViolationException.class, () -> servicio.publicarMascota(1L, datos));
         verify(mascotas, never()).save(any());
     }
 }

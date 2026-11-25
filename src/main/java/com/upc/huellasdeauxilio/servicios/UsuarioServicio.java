@@ -6,6 +6,9 @@ import com.upc.huellasdeauxilio.repositorios.RolRepositorio;
 import com.upc.huellasdeauxilio.repositorios.UsuarioRepositorio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,6 +22,9 @@ public class UsuarioServicio {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public Usuario insertar(Usuario usuario) {
 
@@ -45,8 +51,46 @@ public class UsuarioServicio {
         return usuarioRepositorio.save(usuario);
     }
 
+    public Usuario buscarPorId(Long idUsuario) {
+        return usuarioRepositorio.findById(idUsuario).orElse(null);
+    }
+
     public Usuario buscarPorCorreo(String correo) {
         return usuarioRepositorio.findByCorreo(correo);
+    }
+
+
+    public Usuario actualizarContacto(Long idUsuario, String correo, String telefono) {
+        if (idUsuario == null
+                || correo == null
+                || correo.isBlank()
+                || telefono == null
+                || !telefono.matches("\\d{9}")) {
+            return null;
+        }
+
+        String correoNormalizado =
+                correo.trim().toLowerCase(java.util.Locale.ROOT);
+
+        if (!correoNormalizado.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            return null;
+        }
+
+        Usuario usuario = usuarioRepositorio.findById(idUsuario).orElse(null);
+        if (usuario == null) {
+            return null;
+        }
+
+        Usuario usuarioConCorreo = usuarioRepositorio.findByCorreo(correoNormalizado);
+        if (usuarioConCorreo != null
+                && !usuarioConCorreo.getIdUsuario().equals(idUsuario)) {
+            return null;
+        }
+
+        usuario.setCorreo(correoNormalizado);
+        usuario.setTelefono(telefono);
+
+        return usuarioRepositorio.save(usuario);
     }
 
     public Usuario cambiarContrasena(
@@ -64,24 +108,50 @@ public class UsuarioServicio {
         return null;
     }
 
+    //Eliminado Logico modificado para el funcionamiento con el frontend.
     public Usuario eliminadoLogico(
             String correo,
             String contraseña,
             Long id) {
 
-        Usuario usuario =
-                usuarioRepositorio.findById(id).orElse(null);
-
-        if (usuario != null &&
-                usuario.getCorreo().equals(correo) &&
-                passwordEncoder.matches(contraseña, usuario.getContraseña())) {
-
-            usuario.setEstadoUsuario(false);
-
-            return usuarioRepositorio.save(usuario);
+        if (correo == null || contraseña == null || id == null) {
+            return null;
         }
 
-        return null;
+        Usuario datosIngresados = new Usuario();
+        datosIngresados.setIdUsuario(id);
+        datosIngresados.setCorreo(correo);
+        datosIngresados.setContraseña(contraseña);
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            datosIngresados.getCorreo(),
+                            datosIngresados.getContraseña()
+                    )
+            );
+        } catch (AuthenticationException error) {
+            return null;
+        }
+
+        Usuario usuarioReal = usuarioRepositorio.findByCorreo(
+                datosIngresados.getCorreo()
+        );
+
+        if (usuarioReal == null) {
+            return null;
+        }
+
+        long idIngresado = datosIngresados.getIdUsuario();
+        long idReal = usuarioReal.getIdUsuario();
+
+        if (idIngresado != idReal) {
+            return null;
+        }
+
+        usuarioReal.setEstadoUsuario(false);
+
+        return usuarioRepositorio.save(usuarioReal);
     }
 
     public Usuario cambiarContrasenaDesdePerfil(

@@ -11,6 +11,8 @@ public interface EntidadRepositorio extends JpaRepository<Entidad, Long> {
 
     Entidad findByUsuario_IdUsuario(Long idUsuario);
 
+    List<Entidad> findByUsuario_EstadoUsuarioTrue();
+
     List<Entidad> findByZonaAtencionContainingIgnoreCase(String zonaAtencion);
 
     List<Entidad> findByNombreEntidadContainingIgnoreCase(String nombreEntidad);

@@ -49,7 +49,7 @@ public class EntidadServicio {
     }
 
     public List<Entidad> listarTodas() {
-        return entidadRepositorio.findAll();
+        return entidadRepositorio.findByUsuario_EstadoUsuarioTrue();
     }
 
     public Entidad buscarPorId(Long idEntidad) {
@@ -114,12 +114,8 @@ public class EntidadServicio {
             if(sitioweb != null){
                 entidad.setSitioWeb(sitioweb);
             }
-            if(fechainicioatencion != null){
-                entidad.setFechaAtencionInicio(fechainicioatencion);
-            }
-            if(fechafinalatencion != null){
-                entidad.setFechaAtencionFinal(fechafinalatencion);
-            }
+            entidad.setFechaAtencionInicio(fechainicioatencion);
+            entidad.setFechaAtencionFinal(fechafinalatencion);
             if(diasatencion != null){
                 entidad.setDiasAtencion(diasatencion);
             }

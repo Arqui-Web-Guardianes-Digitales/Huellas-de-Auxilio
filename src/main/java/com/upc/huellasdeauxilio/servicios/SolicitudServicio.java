@@ -113,6 +113,7 @@ public class SolicitudServicio {
         notiCiudadano.setFechaNotificacion(LocalDateTime.now());
 
         notificacionServicio.insertar(notiCiudadano);
+        notificarEntidad(solicitudGuardada, "Nueva solicitud de adopción", "Se recibió una solicitud de adopción para " + mascota.getNombre() + ".");
 
         // Convertir la entidad guardada a DTO
         SolicitudDTO respuesta = modelMapper.map(
@@ -360,6 +361,7 @@ public class SolicitudServicio {
             notificacionServicio.insertar(notificacion);
         }
 
+        notificarEntidad(solicitudActualizada, "Solicitud rechazada", "La solicitud " + solicitudActualizada.getIdSolicitud() + " fue rechazada.");
         return convertirADTO(solicitudActualizada);
     }
 
@@ -393,32 +395,46 @@ public class SolicitudServicio {
                                 "EN_REVISION"
                         );
 
+        long idSolicitudAprobada = solicitudAprobada.getIdSolicitud();
+        long idUsuarioAprobado = 0;
+
+        if (solicitudAprobada.getCiudadano() != null
+                && solicitudAprobada.getCiudadano().getUsuario() != null) {
+            idUsuarioAprobado = solicitudAprobada.getCiudadano().getUsuario().getIdUsuario();
+        }
+
         for (Solicitud otraSolicitud : solicitudesPendientes) {
 
-            otraSolicitud.setEstadoSolicitud("RECHAZADA");
+            if (otraSolicitud.getIdSolicitud() != idSolicitudAprobada) {
+                otraSolicitud.setEstadoSolicitud("RECHAZADA");
 
-            Solicitud solicitudRechazada =
-                    solicitudRepositorio.save(otraSolicitud);
+                Solicitud solicitudRechazada =
+                        solicitudRepositorio.save(otraSolicitud);
 
-            //notificar al ciudadano cuya solicitud fue rechazada automáticamente
-            if (otraSolicitud.getCiudadano() != null
-                    && otraSolicitud.getCiudadano().getUsuario() != null) {
+                if (otraSolicitud.getCiudadano() != null
+                        && otraSolicitud.getCiudadano().getUsuario() != null) {
 
-                Notificacion notificacionRechazo = new Notificacion();
+                    long idUsuarioRechazado = otraSolicitud.getCiudadano().getUsuario().getIdUsuario();
 
-                notificacionRechazo.setSolicitud(solicitudRechazada);
-                notificacionRechazo.setUsuario(
-                        otraSolicitud.getCiudadano().getUsuario()
-                );
-                notificacionRechazo.setTitulo("Solicitud rechazada");
-                notificacionRechazo.setDescripcion(
-                        "Tu solicitud de adopción para "
-                                + mascota.getNombre()
-                                + " ha sido rechazada."
-                );
-                notificacionRechazo.setFechaNotificacion(LocalDateTime.now());
+                    if (idUsuarioRechazado != idUsuarioAprobado) {
+                        Notificacion notificacionRechazo = new Notificacion();
+                        notificacionRechazo.setSolicitud(solicitudRechazada);
+                        notificacionRechazo.setUsuario(otraSolicitud.getCiudadano().getUsuario());
+                        notificacionRechazo.setTitulo("Solicitud rechazada");
+                        notificacionRechazo.setDescripcion(
+                                "Tu solicitud de adopción N.º "
+                                        + solicitudRechazada.getIdSolicitud()
+                                        + " para "
+                                        + mascota.getNombre()
+                                        + " fue rechazada porque se aprobó otra solicitud."
+                        );
+                        notificacionRechazo.setFechaNotificacion(LocalDateTime.now());
 
-                notificacionServicio.insertar(notificacionRechazo);
+                        notificacionServicio.insertar(notificacionRechazo);
+                    }
+                }
+
+                notificarEntidad(solicitudRechazada, "Solicitud rechazada", "La solicitud " + solicitudRechazada.getIdSolicitud() + " fue rechazada al aprobar otra solicitud para la misma mascota.");
             }
         }
 
@@ -449,7 +465,20 @@ public class SolicitudServicio {
             notificacionServicio.insertar(notificacion);
         }
 
+        notificarEntidad(solicitudAprobada, "Solicitud aprobada", "La solicitud " + solicitudAprobada.getIdSolicitud() + " fue aprobada.");
         return convertirADTO(solicitudAprobada);
+    }
+
+    private void notificarEntidad(Solicitud solicitud, String titulo, String descripcion) {
+        if (solicitud.getMascota() != null && solicitud.getMascota().getEntidad() != null
+                && solicitud.getMascota().getEntidad().getUsuario() != null) {
+            Notificacion notificacion = new Notificacion();
+            notificacion.setSolicitud(solicitud);
+            notificacion.setUsuario(solicitud.getMascota().getEntidad().getUsuario());
+            notificacion.setTitulo(titulo);
+            notificacion.setDescripcion(descripcion);
+            notificacionServicio.insertar(notificacion);
+        }
     }
 
     private Solicitud buscarSolicitudGestionable(Long idSolicitud) {
