@@ -6,45 +6,21 @@ services:
     container_name: app
     restart: always
     ports:
-      - "6868:8088"
+      - "127.0.0.1:6868:8088"
     volumes:
       - ./imagenes:/app/imagenes
     networks:
       - my-network-name
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      # Estos valores sobreescriben tu application.properties cuando corra en Docker
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgre
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-db_GuardianesDigitales}
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgre
+      # Los valores privados se proporcionan desde el entorno de ejecución.
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:?Falta la URL JDBC}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:?Falta el usuario}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:?Falta la contraseña}
+      - JWT_SECRET=${JWT_SECRET:?Falta el secreto JWT}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - IP_FRONTEND=${IP_FRONTEND:-http://localhost:4200}
-      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-http://localhost:6868}
-  db:
-    image: postgres:16-alpine
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: always
-    container_name: db
-    networks:
-      - my-network-name
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgre
-      - POSTGRES_DB=${POSTGRES_DB:-db_GuardianesDigitales}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "5433:5432"
-volumes:
-  db_data:
+      - IP_FRONTEND=${IP_FRONTEND:?Falta el origen del frontend}
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:?Falta la URL pública del backend}
+      - SERVER_FORWARD_HEADERS_STRATEGY=framework
 networks:
   my-network-name:
     name: springcloud
