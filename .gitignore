@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Variables y credenciales locales
+.env
+.env.*
+*.env
+*.pem
+*.key
+docker-compose.override.yaml
+docker-compose.override.yml
