@@ -6,6 +6,9 @@ import com.upc.huellasdeauxilio.repositorios.RolRepositorio;
 import com.upc.huellasdeauxilio.repositorios.UsuarioRepositorio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,9 +20,11 @@ public class UsuarioServicio {
     @Autowired
     private RolRepositorio rolRepositorio;
 
-    // INYECTAMOS EL ENCRIPTADOR DE CONTRASEÑAS
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public Usuario insertar(Usuario usuario) {
 
@@ -40,15 +45,52 @@ public class UsuarioServicio {
         usuario.setRol(rol);
         usuario.setEstadoUsuario(true);
 
-        // ¡MAGIA DE SEGURIDAD! Encriptamos la clave antes de guardarla en la base de datos
         String bcryptPassword = passwordEncoder.encode(usuario.getContraseña());
         usuario.setContraseña(bcryptPassword);
 
         return usuarioRepositorio.save(usuario);
     }
 
+    public Usuario buscarPorId(Long idUsuario) {
+        return usuarioRepositorio.findById(idUsuario).orElse(null);
+    }
+
     public Usuario buscarPorCorreo(String correo) {
         return usuarioRepositorio.findByCorreo(correo);
+    }
+
+
+    public Usuario actualizarContacto(Long idUsuario, String correo, String telefono) {
+        if (idUsuario == null
+                || correo == null
+                || correo.isBlank()
+                || telefono == null
+                || !telefono.matches("\\d{9}")) {
+            return null;
+        }
+
+        String correoNormalizado =
+                correo.trim().toLowerCase(java.util.Locale.ROOT);
+
+        if (!correoNormalizado.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            return null;
+        }
+
+        Usuario usuario = usuarioRepositorio.findById(idUsuario).orElse(null);
+        if (usuario == null) {
+            return null;
+        }
+
+        Usuario usuarioConCorreo = usuarioRepositorio.findByCorreo(correoNormalizado);
+        if (usuarioConCorreo != null
+                && !usuarioConCorreo.getIdUsuario().equals(idUsuario)) {
+            return null;
+        }
+
+        usuario.setCorreo(correoNormalizado);
+        usuario.setTelefono(telefono);
+
+        return usuarioRepositorio.save(usuario);
     }
 
     public Usuario cambiarContrasena(
@@ -59,34 +101,58 @@ public class UsuarioServicio {
                 usuarioRepositorio.findByCorreo(correo);
 
         if (usuario != null) {
-            // Encriptamos la nueva contraseña antes de actualizar
             usuario.setContraseña(passwordEncoder.encode(nuevaContrasena));
+            usuario.setVersionSesion((usuario.getVersionSesion() == null ? 0 : usuario.getVersionSesion()) + 1);
             return usuarioRepositorio.save(usuario);
         }
 
         return null;
     }
 
-    // ELIMINADO LOGICO DE USUARIO
+    //Eliminado Logico modificado para el funcionamiento con el frontend.
     public Usuario eliminadoLogico(
             String correo,
             String contraseña,
             Long id) {
 
-        Usuario usuario =
-                usuarioRepositorio.findById(id).orElse(null);
-
-        // Aquí usamos matches() porque la clave en la BD está encriptada y la que manda el usuario no
-        if (usuario != null &&
-                usuario.getCorreo().equals(correo) &&
-                passwordEncoder.matches(contraseña, usuario.getContraseña())) {
-
-            usuario.setEstadoUsuario(false);
-
-            return usuarioRepositorio.save(usuario);
+        if (correo == null || contraseña == null || id == null) {
+            return null;
         }
 
-        return null;
+        Usuario datosIngresados = new Usuario();
+        datosIngresados.setIdUsuario(id);
+        datosIngresados.setCorreo(correo);
+        datosIngresados.setContraseña(contraseña);
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            datosIngresados.getCorreo(),
+                            datosIngresados.getContraseña()
+                    )
+            );
+        } catch (AuthenticationException error) {
+            return null;
+        }
+
+        Usuario usuarioReal = usuarioRepositorio.findByCorreo(
+                datosIngresados.getCorreo()
+        );
+
+        if (usuarioReal == null) {
+            return null;
+        }
+
+        long idIngresado = datosIngresados.getIdUsuario();
+        long idReal = usuarioReal.getIdUsuario();
+
+        if (idIngresado != idReal) {
+            return null;
+        }
+
+        usuarioReal.setEstadoUsuario(false);
+
+        return usuarioRepositorio.save(usuarioReal);
     }
 
     public Usuario cambiarContrasenaDesdePerfil(
@@ -111,7 +177,6 @@ public class UsuarioServicio {
             return null;
         }
 
-        // Verificamos con el encriptador si la clave actual es correcta
         if (!passwordEncoder.matches(contrasenaActual, usuario.getContraseña())) {
             return null;
         }

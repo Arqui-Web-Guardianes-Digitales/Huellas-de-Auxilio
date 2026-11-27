@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Credenciales locales SMTP (HU04): nunca subir a GitHub
+.env
+.env.*
+!.env.example

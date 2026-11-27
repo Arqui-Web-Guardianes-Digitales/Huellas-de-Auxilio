@@ -4,20 +4,33 @@ services:
     build:
       context: .
     container_name: app
+    restart: always
     ports:
-      - "6868:8080"
+      - "6868:8088"
+    volumes:
+      - ./imagenes:/app/imagenes
     networks:
       - my-network-name
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       # Estos valores sobreescriben tu application.properties cuando corra en Docker
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgre
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/db_GuardianesDigitales
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-db_GuardianesDigitales}
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgre
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - IP_FRONTEND=${IP_FRONTEND:-http://localhost:4200}
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-http://localhost:6868}
+      # HU04: configurar en un .env local o secreto del hosting; NO publicar esos valores.
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-}
+      - APP_RESET_URL=${APP_RESET_URL:-http://localhost:4200/nueva-contrasena}
   db:
     image: postgres:16-alpine
     volumes:
@@ -29,7 +42,12 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgre
-      - POSTGRES_DB=db_GuardianesDigitales
+      - POSTGRES_DB=${POSTGRES_DB:-db_GuardianesDigitales}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5433:5432"
 volumes:
