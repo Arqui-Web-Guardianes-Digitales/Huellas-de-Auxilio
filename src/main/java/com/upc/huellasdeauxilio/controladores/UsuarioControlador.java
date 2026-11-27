@@ -125,7 +125,7 @@ public class UsuarioControlador {
 
     // HU04
     @PutMapping("/usuario/contrasena/{correo}")
-    @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
+    @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD') and #correo == authentication.name")
     public UsuarioDTO cambiarContrasena(
             @PathVariable String correo,
             @RequestBody UsuarioDTO usuarioDTO) {
@@ -163,7 +163,7 @@ public class UsuarioControlador {
 
     // HU21 / HU24 - ya existía
     @PutMapping("/usuario/perfil/contrasena/{correo}")
-    @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD')")
+    @PreAuthorize("hasAnyRole('CIUDADANO', 'ENTIDAD') and #correo == authentication.name")
     public String cambiarContrasenaDesdePerfil(
             @PathVariable String correo,
             @RequestBody Map<String, String> datos) {
