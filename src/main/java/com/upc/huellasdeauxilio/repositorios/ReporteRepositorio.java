@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 @Repository
 public interface ReporteRepositorio extends JpaRepository<Reporte, Long> {
@@ -47,6 +50,11 @@ public interface ReporteRepositorio extends JpaRepository<Reporte, Long> {
             @Param("urgencia") String urgencia,
             @Param("distrito") String distrito
     );
+
+    // Mantiene el bloqueo hasta que finalice la transacción de actualización.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Reporte r WHERE r.idReporte = :id")
+    Optional<Reporte> buscarParaActualizar(@Param("id") Long id);
 
     Reporte findByIdReporte(Long idReporte);
 

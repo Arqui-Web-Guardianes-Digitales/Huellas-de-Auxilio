@@ -31,14 +31,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         Set<GrantedAuthority> authorities = new HashSet<>();
         if (usuario.getRol() != null) {
-            // El rol viene de nuestra base de datos (ej: ROLE_CIUDADANO)
             authorities.add(new SimpleGrantedAuthority(usuario.getRol().getTipoRol()));
         }
 
-        // Spring Security maneja el usuario nativo de esta forma
         return org.springframework.security.core.userdetails.User
                 .withUsername(usuario.getCorreo())
                 .password(usuario.getContraseña())
+                .disabled(Boolean.FALSE.equals(usuario.getEstadoUsuario()))
                 .authorities(authorities)
                 .build();
     }

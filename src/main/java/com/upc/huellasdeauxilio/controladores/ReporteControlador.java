@@ -1,12 +1,14 @@
 package com.upc.huellasdeauxilio.controladores;
 
 import com.upc.huellasdeauxilio.dtos.ReporteDTO;
+import com.upc.huellasdeauxilio.dtos.EstadoReporteDTO;
 import com.upc.huellasdeauxilio.entidades.Reporte;
 import com.upc.huellasdeauxilio.servicios.ReporteServicio;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.Map;
@@ -24,7 +26,7 @@ public class ReporteControlador {
 
     @PostMapping("/reporte")
     @PreAuthorize("hasRole('CIUDADANO')")
-    public ReporteDTO insertar(@RequestBody ReporteDTO reporteDTO) {
+    public ReporteDTO insertar(@Valid @RequestBody ReporteDTO reporteDTO) {
         Reporte reporte = modelMapper.map(reporteDTO, Reporte.class);
         reporte = reporteServicio.insertar(reporte);
         return modelMapper.map(reporte, ReporteDTO.class);
@@ -33,8 +35,8 @@ public class ReporteControlador {
     @PutMapping("/reporte/estado/{idReporte}")
     @PreAuthorize("hasRole('ENTIDAD')")
     public ReporteDTO actualizarEstado(@PathVariable Long idReporte,
-                                       @RequestBody ReporteDTO reporteDTO) {
-        Reporte reporteActualizado = reporteServicio.actualizarEstado(idReporte, reporteDTO.getEstado());
+                                       @Valid @RequestBody EstadoReporteDTO reporteDTO) {
+        Reporte reporteActualizado = reporteServicio.actualizarEstado(idReporte, reporteDTO.getEstado(), reporteDTO.getObservacion());
         return (reporteActualizado != null) ? modelMapper.map(reporteActualizado, ReporteDTO.class) : null;
     }
 

@@ -15,6 +15,5 @@ public class CiudadanoDTO {
     private String dni;
     private String distrito;
     private String nombreCompleto;
-
     private Long idUsuario;
 }

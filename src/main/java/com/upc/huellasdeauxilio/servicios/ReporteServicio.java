@@ -1,6 +1,13 @@
 package com.upc.huellasdeauxilio.servicios;
 
 import com.upc.huellasdeauxilio.entidades.Entidad;
+import com.upc.huellasdeauxilio.entidades.Ciudadano;
+import com.upc.huellasdeauxilio.repositorios.CiudadanoRepositorio;
+import com.upc.huellasdeauxilio.repositorios.EntidadRepositorio;
+import com.upc.huellasdeauxilio.entidades.ActualizarReporte;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import com.upc.huellasdeauxilio.entidades.Notificacion;
 import com.upc.huellasdeauxilio.entidades.Reporte;
 import com.upc.huellasdeauxilio.entidades.Ubicacion;
@@ -17,6 +24,9 @@ import java.util.Map;
 public class ReporteServicio {
 
     @Autowired
+    private ActualizarReporteServicio actualizarReporteServicio;
+
+    @Autowired
     private ReporteRepositorio reporteRepositorio;
 
     @Autowired
@@ -28,7 +38,24 @@ public class ReporteServicio {
     @Autowired
     private EntidadServicio entidadServicio;
 
+    @Autowired
+    private CiudadanoRepositorio ciudadanoRepositorio;
+
+    @Autowired
+    private EntidadRepositorio entidadRepositorio;
+
     public Reporte insertar(Reporte reporte) {
+
+        //Busqueda de un ciudadano completo antes de continuar.
+
+        if (reporte.getCiudadano() == null || reporte.getCiudadano().getIdCiudadano() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Falta el ciudadano del reporte.");
+        }
+        Ciudadano ciudadano = ciudadanoRepositorio.findById(reporte.getCiudadano().getIdCiudadano()).orElse(null);
+        if (ciudadano == null || ciudadano.getUsuario() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No se encontró el usuario del ciudadano.");
+        }
+        reporte.setCiudadano(ciudadano);
 
         Ubicacion ubicacion = ubicacionRepositorio.findById(reporte.getUbicacion().getIdUbicacion()).orElse(null);
 
@@ -62,33 +89,52 @@ public class ReporteServicio {
         return reporteGuardado;
     }
 
-    public Reporte actualizarEstado(Long idReporte, String nuevoEstado) {
-        Reporte reporte = reporteRepositorio.findById(idReporte).orElse(null);
-
-        if (reporte == null) {
-            return null;
+    @Transactional
+    public Reporte actualizarEstado(Long idReporte, String nuevoEstado, String observacion) {
+        if (!"ER".equals(nuevoEstado) && !"AT".equals(nuevoEstado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Estado solicitado inválido.");
+        }
+        String nota = observacion == null ? "" : observacion.trim();
+        // La descripción del historial utiliza una columna VARCHAR(255).
+        if (nota.length() > 150) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La observación admite hasta 150 caracteres.");
         }
 
+        Reporte reporte = reporteRepositorio.buscarParaActualizar(idReporte)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reporte no encontrado."));
+        actualizarReporteServicio.verificarEntidad(reporte);
         String estadoActual = reporte.getEstado();
-
-
-        if ((estadoActual.equals("R") && nuevoEstado.equals("ER")) ||
-                (estadoActual.equals("ER") && nuevoEstado.equals("AT"))) {
-
-            reporte.setEstado(nuevoEstado);
-            Reporte reporteActualizado = reporteRepositorio.save(reporte);
-
-            Notificacion notiCiudadano = new Notificacion();
-            notiCiudadano.setReporte(reporteActualizado);
-            notiCiudadano.setUsuario(reporteActualizado.getCiudadano().getUsuario());
-            notiCiudadano.setTitulo("Actualización de Reporte");
-            notiCiudadano.setDescripcion("Tu reporte ha cambiado al estado: " + nuevoEstado);
-            notificacionServicio.insertar(notiCiudadano);
-
-            return reporteActualizado;
+        if (!("R".equals(estadoActual) && "ER".equals(nuevoEstado))
+                && !("ER".equals(estadoActual) && "AT".equals(nuevoEstado))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La transición no está permitida para el estado actual.");
         }
 
-        return null;
+        reporte.setEstado(nuevoEstado);
+        Reporte reporteActualizado = reporteRepositorio.save(reporte);
+        ActualizarReporte historial = new ActualizarReporte();
+        historial.setReporte(reporteActualizado);
+        historial.setDescripcionActu("Estado: " + estadoActual + " → " + nuevoEstado
+                + (nota.isEmpty() ? "" : ". Observación: " + nota));
+        actualizarReporteServicio.insertar(historial);
+
+        Notificacion notificacion = new Notificacion();
+        notificacion.setReporte(reporteActualizado);
+        notificacion.setUsuario(reporteActualizado.getCiudadano().getUsuario());
+        notificacion.setTitulo("Actualización de Reporte");
+        notificacion.setFechaNotificacion(historial.getFechaActualizacion());
+        notificacion.setDescripcion("Tu reporte ha cambiado al estado: " + nuevoEstado);
+        notificacionServicio.insertar(notificacion);
+
+        //Creacion de la notificacion para la entidad
+        if (reporteActualizado.getEntidad() != null && reporteActualizado.getEntidad().getUsuario() != null) {
+            Notificacion avisoEntidad = new Notificacion();
+            avisoEntidad.setReporte(reporteActualizado);
+            avisoEntidad.setUsuario(reporteActualizado.getEntidad().getUsuario());
+            avisoEntidad.setTitulo("Actualización de reporte asignado");
+            avisoEntidad.setDescripcion("El reporte HA-" + reporteActualizado.getIdReporte() + " cambió al estado: " + nuevoEstado);
+            notificacionServicio.insertar(avisoEntidad);
+        }
+        return reporteActualizado;
     }
 
     // para Ciudadano
@@ -118,10 +164,12 @@ public class ReporteServicio {
 
     // para  Entidad
     public List<Reporte> listarPorEntidad(Long idEntidad) {
+        verificarEntidadConsultada(idEntidad);
         return reporteRepositorio.findByEntidad_IdEntidadOrderByFechaReporteDesc(idEntidad);
     }
 
     public Map<String, Long> obtenerResumenEntidad(Long idEntidad) {
+        verificarEntidadConsultada(idEntidad);
         long total = reporteRepositorio.countByEntidad_IdEntidad(idEntidad);
         long enRevision = reporteRepositorio.countByEntidad_IdEntidadAndEstado(idEntidad, "ER");
         long atendidos = reporteRepositorio.countByEntidad_IdEntidadAndEstado(idEntidad, "AT");
@@ -134,12 +182,28 @@ public class ReporteServicio {
     }
 
     public List<Reporte> filtrarReportesEntidad(Long idEntidad, String estado, String urgencia, String distrito) {
+        verificarEntidadConsultada(idEntidad);
         return reporteRepositorio.filtrarReportesPorEntidad(idEntidad, estado, urgencia, distrito);
     }
 
     //Buscar Por Id cuando una entidad requiera de visualizar una entidads
     public Reporte buscarPorId(Long Id){
 
-        return reporteRepositorio.findById(Id).orElse(null);
+        if (Id == null || Id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de reporte inválido.");
+        }
+        Reporte reporte = reporteRepositorio.findById(Id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reporte no encontrado."));
+        actualizarReporteServicio.verificarEntidad(reporte);
+        return reporte;
     }
+    private void verificarEntidadConsultada(Long idEntidad) {
+        if (idEntidad == null || idEntidad <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de entidad inválido.");
+        }
+        Entidad entidad = entidadRepositorio.findById(idEntidad)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entidad no encontrada."));
+        actualizarReporteServicio.verificarEntidad(entidad);
+    }
+
 }

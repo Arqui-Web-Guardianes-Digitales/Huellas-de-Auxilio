@@ -1,6 +1,7 @@
 package com.upc.huellasdeauxilio.controladores;
 
 import com.upc.huellasdeauxilio.dtos.MascotaDTO;
+import jakarta.validation.Valid;
 import com.upc.huellasdeauxilio.servicios.MascotaServicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -69,7 +70,7 @@ public class MascotaControlador {
     @PostMapping("/mascotas/entidad/{idEntidad}")
     @PreAuthorize("hasRole('ENTIDAD')")
     public MascotaDTO publicarMascota(@PathVariable Long idEntidad,
-                                      @RequestBody MascotaDTO mascotaDTO)
+                                      @Valid @RequestBody MascotaDTO mascotaDTO)
     {
         return mascotaServicio.publicarMascota(idEntidad, mascotaDTO);
     }
@@ -77,7 +78,7 @@ public class MascotaControlador {
     @PutMapping("/mascota/{idMascota}")
     @PreAuthorize("hasRole('ENTIDAD')")
     public MascotaDTO editarMascota(@PathVariable Long idMascota,
-                                    @RequestBody MascotaDTO mascotaDTO) {
+                                    @Valid @RequestBody MascotaDTO mascotaDTO) {
         return mascotaServicio.editarMascota(idMascota, mascotaDTO);
     }
 }

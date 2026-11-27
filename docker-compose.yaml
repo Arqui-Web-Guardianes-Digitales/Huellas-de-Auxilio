@@ -1,47 +1,49 @@
+
 services:
   app:
-    image: 'huellas-backend:latest'
+    image: huellas-backend:latest
     build:
       context: .
     container_name: app
     restart: always
     ports:
-      - "6868:8088"
+      - "${BACKEND_PORT_BIND:-127.0.0.1}:6868:8088"
     volumes:
       - ./imagenes:/app/imagenes
     networks:
       - my-network-name
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      # Estos valores sobreescriben tu application.properties cuando corra en Docker
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgre
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-db_GuardianesDigitales}
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgre
+      # Base de datos: local o AWS RDS
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:?Falta la URL JDBC}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:?Falta el usuario}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:?Falta la contraseña}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - IP_FRONTEND=${IP_FRONTEND:-http://localhost:4200}
-      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-http://localhost:6868}
-      # HU04: configurar en un .env local o secreto del hosting; NO publicar esos valores.
+
+      # Seguridad JWT
+      - JWT_SECRET=${JWT_SECRET:?Falta el secreto JWT}
+
+      # Frontend y URL pública
+      - IP_FRONTEND=${IP_FRONTEND:?Falta el origen del frontend}
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:?Falta la URL pública del backend}
+      - SERVER_FORWARD_HEADERS_STRATEGY=framework
+
+      # HU04 - Recuperación de contraseña
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - MAIL_USERNAME=${MAIL_USERNAME:-}
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-}
       - APP_RESET_URL=${APP_RESET_URL:-http://localhost:4200/nueva-contrasena}
+
+  # Base de datos opcional para desarrollo local
   db:
     image: postgres:16-alpine
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    restart: always
-    container_name: db
-    networks:
-      - my-network-name
+    profiles:
+      - local-db
+    restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgre
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Falta la contraseña de PostgreSQL local}
       - POSTGRES_DB=${POSTGRES_DB:-db_GuardianesDigitales}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -49,9 +51,15 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - my-network-name
+
 volumes:
   db_data:
+
 networks:
   my-network-name:
     name: springcloud

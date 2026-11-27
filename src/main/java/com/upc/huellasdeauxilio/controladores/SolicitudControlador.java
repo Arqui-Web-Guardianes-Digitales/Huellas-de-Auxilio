@@ -2,6 +2,7 @@ package com.upc.huellasdeauxilio.controladores;
 
 import com.upc.huellasdeauxilio.dtos.SolicitudDTO;
 import com.upc.huellasdeauxilio.servicios.SolicitudServicio;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,7 +17,7 @@ public class SolicitudControlador {
 
     @PostMapping("/solicitud/ciudadano/{idCiudadano}")
     @PreAuthorize("hasRole('CIUDADANO')")
-    public SolicitudDTO insertar(@PathVariable Long idCiudadano, @RequestBody SolicitudDTO solicitudDTO)
+    public SolicitudDTO insertar(@PathVariable Long idCiudadano, @Valid @RequestBody SolicitudDTO solicitudDTO)
     {
         return solicitudServicio.insertar(idCiudadano, solicitudDTO);
     }
@@ -43,8 +44,8 @@ public class SolicitudControlador {
     @GetMapping("/solicitudes/ciudadano/{idCiudadano}/filtrar/{nombreMascota}/{estado}")
     @PreAuthorize("hasRole('CIUDADANO')")
     public List<SolicitudDTO> filtrarSolicitudes(@PathVariable Long idCiudadano,
-                                              @PathVariable String nombreMascota,
-                                              @PathVariable String estado)
+                                                 @PathVariable String nombreMascota,
+                                                 @PathVariable String estado)
     {
         return solicitudServicio.filtrarSolicitudes(idCiudadano,nombreMascota,estado);
     }

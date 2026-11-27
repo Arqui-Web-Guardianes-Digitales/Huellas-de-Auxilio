@@ -10,6 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import jakarta.validation.Validator;
+import jakarta.validation.ConstraintViolationException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -24,6 +32,9 @@ public class MascotaServicio {
 
     @Autowired
     private EntidadRepositorio entidadRepositorio;
+
+    @Autowired
+    private Validator validator;
 
     public List<MascotaDTO> listarDisponibles() {
         return mascotaRepositorio.findByEstadoTrue().stream().
@@ -143,33 +154,22 @@ public class MascotaServicio {
 
     public MascotaDTO publicarMascota(Long idEntidad, MascotaDTO mascotaDTO) {
 
-        if (idEntidad == null
-                || mascotaDTO == null
-                || mascotaDTO.getNombre() == null
-                || mascotaDTO.getNombre().isBlank()
-                || mascotaDTO.getEspecie() == null
-                || mascotaDTO.getEspecie().isBlank()
-                || mascotaDTO.getEdad() == null
-                || mascotaDTO.getEdad().isBlank()
-                || mascotaDTO.getSexo() == null
-                || mascotaDTO.getSexo().isBlank()
-                || mascotaDTO.getDistrito() == null
-                || mascotaDTO.getDistrito().isBlank()
-                || mascotaDTO.getTamaño() == null
-                || mascotaDTO.getTamaño().isBlank()
-                || mascotaDTO.getDescripcion() == null
-                || mascotaDTO.getDescripcion().isBlank()
-                || mascotaDTO.getUrlFoto() == null
-                || mascotaDTO.getUrlFoto().isBlank()) {
-
-            return null;
+        Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
+        if (autenticacion == null || !autenticacion.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión inválida.");
         }
-
-        Entidad entidad = entidadRepositorio.findById(idEntidad).orElse(null);
-
-        if (entidad == null) {
-            return null;
+        if (idEntidad == null || idEntidad <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de entidad inválido.");
         }
+        Entidad entidad = entidadRepositorio.findById(idEntidad)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entidad no encontrada."));
+        boolean esEntidad = autenticacion.getAuthorities().stream()
+                .anyMatch(rol -> "ROLE_ENTIDAD".equals(rol.getAuthority()));
+        if (!esEntidad || entidad.getUsuario() == null
+                || !autenticacion.getName().equals(entidad.getUsuario().getCorreo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes publicar para tu propia entidad.");
+        }
+        validarDatosMascota(mascotaDTO);
 
         // Convertir DTO a entidad
         Mascota mascota = modelMapper.map(mascotaDTO, Mascota.class);
@@ -193,40 +193,56 @@ public class MascotaServicio {
         return respuesta;
     }
 
+    private void validarDatosMascota(MascotaDTO mascotaDTO) {
+        if (mascotaDTO == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa los datos de la mascota.");
+        }
+        var errores = validator.validate(mascotaDTO);
+        if (!errores.isEmpty()) throw new ConstraintViolationException(errores);
+        if (!edadValida(mascotaDTO.getEdad())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La edad debe ser positiva en meses o años, o conservar su categoría anterior.");
+        }
+        mascotaDTO.setNombre(mascotaDTO.getNombre().trim());
+        mascotaDTO.setDescripcion(mascotaDTO.getDescripcion().trim());
+        mascotaDTO.setEdad(mascotaDTO.getEdad().trim());
+        mascotaDTO.setUrlFoto(mascotaDTO.getUrlFoto().trim());
+
+    }
+
+    private boolean edadValida(String edad) {
+        String valor = normalizarFiltro(edad);
+        // Compatibilidad con clientes y registros anteriores, sin inventar una edad exacta.
+        if (List.of("cachorro", "joven", "adulto").contains(valor)) return true;
+        Matcher coincidencia = Pattern.compile("^([0-9]+(?:[.,][0-9]+)?(?:e[+-]?[0-9]+)?) (mes|meses|año|años)$")
+                .matcher(valor);
+        if (!coincidencia.matches()) return false;
+        try {
+            double cantidad = Double.parseDouble(coincidencia.group(1).replace(',', '.'));
+            double meses = coincidencia.group(2).startsWith("año") ? cantidad * 12 : cantidad;
+            return Double.isFinite(meses) && meses > 0;
+        } catch (NumberFormatException error) {
+            return false;
+        }
+    }
+
     public MascotaDTO editarMascota(Long idMascota, MascotaDTO datosMascota) {
 
-        if (datosMascota == null
-                || datosMascota.getNombre() == null
-                || datosMascota.getNombre().isBlank()
-                || datosMascota.getEspecie() == null
-                || datosMascota.getEspecie().isBlank()
-                || datosMascota.getEdad() == null
-                || datosMascota.getEdad().isBlank()
-                || datosMascota.getSexo() == null
-                || datosMascota.getSexo().isBlank()
-                || datosMascota.getDistrito() == null
-                || datosMascota.getDistrito().isBlank()
-                || datosMascota.getTamaño() == null
-                || datosMascota.getTamaño().isBlank()
-                || datosMascota.getDescripcion() == null
-                || datosMascota.getDescripcion().isBlank()
-                || datosMascota.getUrlFoto() == null
-                || datosMascota.getUrlFoto().isBlank()) {
-
-            return null;
+        Authentication autenticacion = SecurityContextHolder.getContext().getAuthentication();
+        if (autenticacion == null || !autenticacion.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión inválida.");
         }
-
-        if (idMascota == null) {
-            return null;
+        if (idMascota == null || idMascota <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de mascota inválido.");
         }
-
-        Mascota mascota = mascotaRepositorio
-                .findById(idMascota)
-                .orElse(null);
-
-        if (mascota == null) {
-            return null;
+        Mascota mascota = mascotaRepositorio.findById(idMascota)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mascota no encontrada."));
+        boolean esEntidad = autenticacion.getAuthorities().stream()
+                .anyMatch(rol -> "ROLE_ENTIDAD".equals(rol.getAuthority()));
+        if (!esEntidad || mascota.getEntidad() == null || mascota.getEntidad().getUsuario() == null
+                || !autenticacion.getName().equals(mascota.getEntidad().getUsuario().getCorreo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes editar mascotas de tu propia entidad.");
         }
+        validarDatosMascota(datosMascota);
 
         // Actualizar únicamente los atributos editables
         mascota.setNombre(datosMascota.getNombre());
