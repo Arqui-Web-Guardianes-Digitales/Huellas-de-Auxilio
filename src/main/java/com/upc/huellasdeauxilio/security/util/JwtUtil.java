@@ -1,5 +1,8 @@
 package com.upc.huellasdeauxilio.security.util;
 
+import com.upc.huellasdeauxilio.entidades.Usuario;
+import com.upc.huellasdeauxilio.repositorios.UsuarioRepositorio;
+import org.springframework.beans.factory.annotation.Autowired;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -18,9 +21,18 @@ import java.util.function.Function;
 public class JwtUtil {
 
     private final SecretKey secretKey;
+    private final UsuarioRepositorio usuarios;
 
-    public JwtUtil(@Value("${jwt.secret}") String secretKey) {
+    @Autowired
+    public JwtUtil(@Value("${jwt.secret}") String secretKey, UsuarioRepositorio usuarios) {
         this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey.trim()));
+        this.usuarios = usuarios;
+    }
+
+    // Conserva compatibilidad con pruebas unitarias sin contexto Spring ni PostgreSQL.
+    public JwtUtil(String secretKey) {
+        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey.trim()));
+        this.usuarios = null;
     }
 
     public String extractUsername(String token) {
@@ -46,6 +58,11 @@ public class JwtUtil {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        if (usuarios != null) {
+            Usuario usuario = usuarios.findByCorreo(userDetails.getUsername());
+            if (usuario == null) throw new IllegalStateException("No se encontro el usuario del token");
+            claims.put("sv", usuario.getVersionSesion() == null ? 0 : usuario.getVersionSesion());
+        }
         return createToken(claims, userDetails.getUsername());
     }
 
@@ -57,6 +74,12 @@ public class JwtUtil {
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        if (!username.equals(userDetails.getUsername()) || isTokenExpired(token)) return false;
+        if (usuarios == null) return true; // Solo pruebas unitarias sin base de datos.
+        Usuario usuario = usuarios.findByCorreo(username);
+        if (usuario == null || Boolean.FALSE.equals(usuario.getEstadoUsuario())) return false;
+        Object versionJwt = extractAllClaims(token).get("sv");
+        int versionActual = usuario.getVersionSesion() == null ? 0 : usuario.getVersionSesion();
+        return versionJwt instanceof Number numero && numero.intValue() == versionActual;
     }
 }

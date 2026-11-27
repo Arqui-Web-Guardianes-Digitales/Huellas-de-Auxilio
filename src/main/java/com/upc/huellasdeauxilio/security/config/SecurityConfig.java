@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // ENDPOINTS PÚBLICOS (Sin Token)
                         .requestMatchers("/api/authenticate").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuario").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/ciudadano").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/entidad").permitAll()

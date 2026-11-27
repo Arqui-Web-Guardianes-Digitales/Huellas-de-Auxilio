@@ -102,6 +102,7 @@ public class UsuarioServicio {
 
         if (usuario != null) {
             usuario.setContraseña(passwordEncoder.encode(nuevaContrasena));
+            usuario.setVersionSesion((usuario.getVersionSesion() == null ? 0 : usuario.getVersionSesion()) + 1);
             return usuarioRepositorio.save(usuario);
         }
 

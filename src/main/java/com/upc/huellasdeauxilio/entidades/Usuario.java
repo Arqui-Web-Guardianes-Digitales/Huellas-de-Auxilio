@@ -22,4 +22,9 @@ public class Usuario {
     private String telefono;
     private String contraseña;
     private Boolean estadoUsuario = true;
+
+    // Revocacion de JWT despues de cambiar la contraseña. Nullable para no
+    // romper usuarios anteriores a esta version (null equivale a cero).
+    @Column(name = "version_sesion")
+    private Integer versionSesion = 0;
 }
